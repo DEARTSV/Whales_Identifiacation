@@ -126,12 +126,12 @@ class Siamese(object):
     def predict(self, img_dir, csv='', meta_dir='data/meta'):
         assert self.embeddings is not None
         img_names = np.array(os.listdir(img_dir)) if csv == '' else pd.read_csv(csv)['Image'].values
-        # bboxes = pd.read_pickle(os.path.join(meta_dir, 'bboxes.pkl')).set_index('filename')
-        # whales_seq = WhalesSequence(img_dir, bboxes=bboxes, input_shape=self.input_shape, x_set=img_names, batch_size=1)
-        # whales = self.model.predict_generator(whales_seq, verbose=1)
-        #
-        # np.save(os.path.join(self.cache_dir, 'debug', 'raw_predictions'), whales)
-        whales = np.load('trained/raw_predictions.npy', allow_pickle=True)
+        bboxes = pd.read_pickle(os.path.join(meta_dir, 'bboxes.pkl')).set_index('filename')
+        whales_seq = WhalesSequence(img_dir, bboxes=bboxes, input_shape=self.input_shape, x_set=img_names, batch_size=1)
+        whales = self.model.predict_generator(whales_seq, verbose=1)
+        
+        np.save(os.path.join(self.cache_dir, 'debug', 'raw_predictions'), whales)
+        # whales = np.load('trained/raw_predictions.npy', allow_pickle=True)
 
         ids = self.embeddings['Id'].values.astype('int')
         embeddings = self.embeddings.drop(['Id'], axis=1).values
