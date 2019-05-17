@@ -8,6 +8,9 @@ from os.path import join
 
 
 def fetch(img_dir, name):
+    if name[-1] == 'F':
+        name = name[:-1]
+
     img = cv2.imread(join(img_dir, name))
     if img.shape == 2:
         img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)

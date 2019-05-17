@@ -7,6 +7,7 @@ import pandas as pd
 from keras.utils import Sequence
 from keras.preprocessing.image import ImageDataGenerator
 # from sklearn.utils import shuffle
+import cv2
 
 from .preprocessing import fetch, resize, pad
 
@@ -14,6 +15,11 @@ class WhalesSequence(Sequence):
     def __init__(self, img_dir, bboxes, input_shape, x_set, y_set=None, batch_size=16):
         if y_set is not None:
             self.x, self.y = x_set, y_set
+
+            # double classes using flip
+            self.x = np.append(self.x, [x + 'F' for x in self.x])
+            self.y = np.append(self.y, [y + 6000 for y in self.y])
+
             self.dataset = pd.DataFrame(data={'x': self.x, 'y': self.y, 'used': np.zeros_like(self.y)})
             self.dataset['class_count'] = self.dataset.groupby('y')['y'].transform('count')
         else:
@@ -38,7 +44,7 @@ class WhalesSequence(Sequence):
             batch_x = self.x[idx * self.batch_size:(idx + 1) * self.batch_size]
             return np.array([self.preprocess(fetch(self.img_dir, name), name) for name in batch_x])
 
-        n_single, n_single_not = 0, 15  # !!!!!!!!!!!!!
+        n_single, n_single_not = 0, 15
         unused = self.dataset.loc[self.dataset['used'] == 0]
         single_img_not = unused.loc[self.dataset['class_count'] > 1]
         if len(single_img_not) >= n_single_not:
@@ -70,11 +76,17 @@ class WhalesSequence(Sequence):
         batch_y = self.dataset.iloc[batch_indices]['y'].values
         return np.array([self.preprocess(fetch(self.img_dir, name), name) for name in batch_x]), np.array(batch_y)
 
-    def preprocess(self, img, name):
+    def preprocess(self, img, name, flip=False):
         assert len(img.shape) == 3
+
+        if name[-1] == 'F':
+            name = name[:-1]
+            flip = True
 
         bbox = self.bboxes.loc[name][0]
         img = img[bbox[0]:bbox[2], bbox[1]:bbox[3]]
+        if flip:
+            img = cv2.flip(img, 1)
 
         h, w, _ = img.shape
         if h / w <= self.input_shape[0] / self.input_shape[1]:
